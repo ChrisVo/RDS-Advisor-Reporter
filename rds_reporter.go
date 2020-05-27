@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/support"
 )
 
@@ -19,8 +20,20 @@ func init() {
 	flag.StringVar(&reportName, "f", "report.csv", "Name of report")
 }
 
+// GetAccountID returns the AWS Account ID we're operating in
+func GetAccountID(sess *session.Session) string {
+	stsSvc := sts.New(sess)
+	accountID, err := stsSvc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+
+	if err != nil {
+		log.Fatal("Couldn't get the caller identity")
+	}
+
+	return *accountID.Account
+}
+
 // WriteCsv will write the line item parameter to the csv file.
-func WriteCsv(lineItem []*support.TrustedAdvisorResourceDetail) {
+func WriteCsv(lineItem []*support.TrustedAdvisorResourceDetail, accountID string) {
 
 	flag.Parse()
 
@@ -42,27 +55,24 @@ func WriteCsv(lineItem []*support.TrustedAdvisorResourceDetail) {
 	csvWriter := csv.NewWriter(file)
 
 	defer file.Close()
-	csvWriter.Write([]string{"region", "db_name", "multi_az",
-		"instance_type",
-		"storage_provision",
-		"days_since_last_connection",
-		"estimated_monthly_savings"})
 	for _, item := range lineItem {
 		var sliceItem []string
 		for _, data := range item.Metadata {
 			sliceItem = append(sliceItem, *data)
 		}
+		// Add account ID to the line item
+		sliceItem = append(sliceItem, accountID)
 		csvWriter.Write(sliceItem)
 	}
 	csvWriter.Flush()
-	fmt.Printf("\nRDS Utilization report Trusted Advisor report created.\n")
+	fmt.Printf("RDS Utilization report Trusted Advisor report created.\n")
 }
 
 func main() {
 	sess, err := session.NewSession(&aws.Config{
 		Region: aws.String("us-east-1"),
 	})
-
+	accountID := GetAccountID(sess)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,6 +106,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	WriteCsv(summary.Result.FlaggedResources)
+	WriteCsv(summary.Result.FlaggedResources, accountID)
 
 }
