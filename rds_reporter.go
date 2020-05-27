@@ -16,14 +16,14 @@ var reportName string
 
 func init() {
 	flag.StringVar(&reportName, "filename", "report.csv", "Name of report")
-	flag.StringVar(&reportName, "filename", "report.csv", "Name of report")
+	flag.StringVar(&reportName, "f", "report.csv", "Name of report")
 }
 
 // WriteCsv will write the line item parameter to the csv file.
 func WriteCsv(lineItem []*support.TrustedAdvisorResourceDetail) {
 
 	flag.Parse()
-	fmt.Println(reportName)
+
 	if _, err := os.Stat(reportName); os.IsNotExist(err) {
 		fmt.Println(reportName + " doesn't exist. Creating the report.")
 		_, err := os.Create(reportName)
@@ -55,7 +55,7 @@ func WriteCsv(lineItem []*support.TrustedAdvisorResourceDetail) {
 		csvWriter.Write(sliceItem)
 	}
 	csvWriter.Flush()
-	fmt.Println("RDS Utilization report Trusted Advisor report created. See " + reportName)
+	fmt.Printf("\nRDS Utilization report Trusted Advisor report created.\n")
 }
 
 func main() {
